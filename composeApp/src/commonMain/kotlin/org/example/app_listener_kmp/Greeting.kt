@@ -1,4 +1,4 @@
-package org.example.project
+package org.example.app_listener_kmp
 
 class Greeting {
     private val platform = getPlatform()

@@ -1,4 +1,4 @@
-package org.example.project
+package org.example.app_listener_kmp
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

@@ -1,9 +1,9 @@
-package org.example.project
+package org.example.app_listener_kmp
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ComposeAppAndroidUnitTest {
+class ComposeAppCommonTest {
 
     @Test
     fun example() {

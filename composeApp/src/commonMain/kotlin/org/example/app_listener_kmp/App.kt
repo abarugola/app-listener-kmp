@@ -1,4 +1,4 @@
-package org.example.project
+package org.example.app_listener_kmp
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
