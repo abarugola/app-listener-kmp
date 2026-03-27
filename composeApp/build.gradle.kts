@@ -29,6 +29,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation("com.google.accompanist:accompanist-drawablepainter:0.34.0")
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
