@@ -74,3 +74,23 @@ fun getTodayRange(): Pair<Long, Long> {
 
     return startOfDay to now
 }
+
+fun getForegroundApp (): String? {
+    val usm = appContext.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    val now = System.currentTimeMillis()
+
+    // Pedimos solo los ultimos 3 segundos de eventos
+    val events = usm.queryEvents(now - 3000, now)
+    val event = UsageEvents.Event()
+    var lastPackage: String ? =  null
+
+    while (events.hasNextEvent()) {
+        events.getNextEvent(event)
+        // ACTIVITY_RESUMEDD significa esta app paso al frente
+        if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+            lastPackage = event.packageName
+        }
+    }
+
+    return lastPackage
+}

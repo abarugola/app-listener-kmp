@@ -23,6 +23,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,14 +36,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.example.app_listener_kmp.domain.AppInfo
+import org.example.app_listener_kmp.platform.blockApp
+import org.example.app_listener_kmp.platform.unblockApp
 
 @Composable
 fun AppScreen(apps: List<AppInfo>) {
+    var blockedApps by remember { mutableStateOf(setOf<String>())}
+    var showContent by remember { mutableStateOf(false) }
 
     MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
+
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
@@ -65,7 +72,21 @@ fun AppScreen(apps: List<AppInfo>) {
                         items = apps,
                         key = { it.packageName}
                     ) { app ->
-                        AppItem(app)
+                        AppItem(
+                            app = app,
+                            isBlocked = blockedApps.contains(app.packageName),
+                            onToggleBlock = { shouldBlock ->
+                                if (shouldBlock) {
+                                    // Agregamos al set y arrancamos el servicio
+                                    blockedApps = blockedApps + app.packageName
+                                    blockApp(app.packageName)
+                                } else {
+                                    // removemos del set
+                                    blockedApps = blockedApps - app.packageName
+                                    unblockApp(app.packageName)
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -74,38 +95,69 @@ fun AppScreen(apps: List<AppInfo>) {
 }
 
 @Composable
-fun AppItem(app: AppInfo) {
-    Row (
+fun AppItem(
+    app: AppInfo,
+    isBlocked: Boolean,
+    onToggleBlock: (Boolean) -> Unit
+) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isBlocked)
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+            else
+                MaterialTheme.colorScheme.surface
+        )
     ) {
-        Box(
+        Row (
             modifier = Modifier
-                .size(40.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            AppIcon(app.icon)
-        }
+            // Icono de la app
+            Box(modifier = Modifier.size(44.dp)) {
+                AppIcon(app.icon)
+            }
 
-        Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-        Column {
-            Text(text = app.name)
+            // weight(1f) hace que tome todo el espacio disponible,
+            //empujando el tiempo y el toogle hacia los extremos
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = app.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    // si el nombre es muy largo agrega ... al final
+                    overflow = TextOverflow.Ellipsis
+                    )
 
-            Text(
-                text = app.packageName,
-                style = MaterialTheme.typography.bodySmall
+                Text(
+                    text = formatTime(app.usageTime),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+
+            Switch(
+                checked = isBlocked,
+                onCheckedChange = onToggleBlock,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.error,
+                    checkedTrackColor = MaterialTheme.colorScheme.errorContainer
+                )
             )
         }
+    }
 
-        Column {
-            Text(text = formatTime(app.usageTime))
-        }
+
 
         //add column to show usage time
-    }
+
 }
 
 @Composable
