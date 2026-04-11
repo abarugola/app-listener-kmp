@@ -1,5 +1,6 @@
 package org.example.app_listener_kmp.ui
 
+import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.PersistableBundle
@@ -77,7 +78,14 @@ class BlockActivity: ComponentActivity(){
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Button(onClick = { finish() }) {// cierra este Activity
+                Button(onClick = {
+                    val intent = Intent(Intent.ACTION_MAIN).apply {
+                        addCategory(Intent.CATEGORY_HOME)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    startActivity(intent)
+                    finish()
+                }) {// cierra este Activity
                     Text("Cerrar")
                 }
             }

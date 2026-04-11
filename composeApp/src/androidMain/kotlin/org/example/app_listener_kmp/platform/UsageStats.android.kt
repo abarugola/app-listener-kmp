@@ -79,18 +79,42 @@ fun getForegroundApp (): String? {
     val usm = appContext.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     val now = System.currentTimeMillis()
 
-    // Pedimos solo los ultimos 3 segundos de eventos
-    val events = usm.queryEvents(now - 3000, now)
+    // Ampliamos la ventana a 10 minutos en lugar de 3 segundos
+    // Esto nos permite encontrar el último ACTIVITY_RESUMED aunque
+    // la app lleve varios minutos abierta sin producir nuevos eventos
+    val events = usm.queryEvents(now - 10 * 60 * 1000L, now)
     val event = UsageEvents.Event()
-    var lastPackage: String ? =  null
+
+    // En lugar de solo guardar el último RESUMED, rastreamos
+    // el estado de cada app por separado
+    // resumed guarda el timestamp del último RESUMED de cada app
+    // paused guarda el timestamp del último PAUSED de cada app
+    val resumedMap = mutableMapOf<String, Long>()
+    val pausedMap = mutableMapOf<String, Long>()
 
     while (events.hasNextEvent()) {
         events.getNextEvent(event)
-        // ACTIVITY_RESUMEDD significa esta app paso al frente
-        if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-            lastPackage = event.packageName
+        when (event.eventType) {
+            UsageEvents.Event.ACTIVITY_RESUMED -> {
+                resumedMap[event.packageName] = event.timeStamp
+            }
+            UsageEvents.Event.ACTIVITY_PAUSED -> {
+                pausedMap[event.packageName] = event.timeStamp
+            }
         }
     }
 
-    return lastPackage
+    // La app en foreground es aquella que tiene un RESUMED más reciente
+    // que su PAUSED — es decir, fue abierta pero no cerrada después
+    return resumedMap
+        .filter { (pkg, resumeTime) ->
+            val pauseTime = pausedMap[pkg] ?: 0L
+            // Si el último RESUMED es más reciente que el último PAUSED,
+            // significa que la app está actualmente al frente
+            resumeTime > pauseTime
+        }
+        // De todas las apps que "están al frente" (puede haber varias en transición),
+        // tomamos la que tiene el RESUMED más reciente
+        .maxByOrNull { it.value }
+        ?.key
 }
