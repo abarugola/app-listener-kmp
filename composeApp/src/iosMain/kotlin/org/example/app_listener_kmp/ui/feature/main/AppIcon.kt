@@ -1,4 +1,4 @@
-package org.example.app_listener_kmp.ui
+package org.example.app_listener_kmp.ui.feature.main
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable

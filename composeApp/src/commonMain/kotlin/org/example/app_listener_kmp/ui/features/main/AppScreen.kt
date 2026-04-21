@@ -1,9 +1,10 @@
-package org.example.app_listener_kmp.ui
+package org.example.app_listener_kmp.ui.features.main
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -38,55 +41,86 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.example.app_listener_kmp.domain.AppInfo
+import applisterkmp.composeapp.generated.resources.Res
+import applisterkmp.composeapp.generated.resources.ic_settings
+import org.example.app_listener_kmp.domain.model.AppInfo
+import org.example.app_listener_kmp.domain.repository.BlockConfigRepository
 import org.example.app_listener_kmp.platform.blockApp
 import org.example.app_listener_kmp.platform.unblockApp
+import org.example.app_listener_kmp.ui.features.settings.SettingsScreen
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
-fun AppScreen(apps: List<AppInfo>) {
-    var blockedApps by remember { mutableStateOf(setOf<String>())}
+fun AppScreen(
+    apps: List<AppInfo>,
+    repository: BlockConfigRepository
+) {
+    var blockedApps by remember { mutableStateOf(repository.getBlockedPackages())}
     var showContent by remember { mutableStateOf(false) }
 
-    MaterialTheme {
+    var showSettings by remember { mutableStateOf(false) }
 
-        Column(
+    if (showSettings) {
+        SettingsScreen(onBack = { showSettings = false })
+        return
+    }
+
+    MaterialTheme {
+        // Box como contenedor raíz nos permite superponer el ícono
+        // encima del contenido usando alignment
+        Box(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxSize()
         ) {
-            Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                TopAppsContent(apps)
-            }
-            Button(onClick = { showContent = !showContent }) {
-                Text("Complete list")
-            }
-            AnimatedVisibility(showContent) {
-                LazyColumn (
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp),
+            // Contenido principal — igual que antes
+            Column(
+                modifier = Modifier
+                    .safeContentPadding()
+                    .fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    items(
-                        items = apps,
-                        key = { it.packageName}
-                    ) { app ->
-                        AppItem(
-                            app = app,
-                            isBlocked = blockedApps.contains(app.packageName),
-                            onToggleBlock = { shouldBlock ->
-                                if (shouldBlock) {
-                                    // Agregamos al set y arrancamos el servicio
-                                    blockedApps = blockedApps + app.packageName
-                                    blockApp(app.packageName)
-                                } else {
-                                    // removemos del set
-                                    blockedApps = blockedApps - app.packageName
-                                    unblockApp(app.packageName)
-                                }
-                            }
+                    IconButton(onClick = { showSettings = true }) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_settings),
+                            contentDescription = "Configuración"
                         )
+                    }
+                }
+
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    TopAppsContent(apps)
+                }
+                Button(onClick = { showContent = !showContent }) {
+                    Text(if (showContent) "Hide list" else "Complete list")
+                }
+                AnimatedVisibility(showContent) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp),
+                    ) {
+                        items(items = apps, key = { it.packageName }) { app ->
+                            AppItem(
+                                app = app,
+                                isBlocked = blockedApps.contains(app.packageName),
+                                onToggleBlock = { shouldBlock ->
+                                    if (shouldBlock) {
+                                        blockedApps = blockedApps + app.packageName
+                                        repository.addBlockedPackage(app.packageName)
+                                        blockApp(app.packageName)
+                                    } else {
+                                        blockedApps = blockedApps - app.packageName
+                                        repository.removeBlockedPackage(app.packageName)
+                                        unblockApp(app.packageName)
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
