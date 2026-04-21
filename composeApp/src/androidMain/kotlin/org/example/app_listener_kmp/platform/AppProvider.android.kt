@@ -2,7 +2,7 @@ package org.example.app_listener_kmp.platform
 
 import android.content.Context
 import android.content.Intent
-import org.example.app_listener_kmp.domain.AppInfo
+import org.example.app_listener_kmp.domain.model.AppInfo
 import org.example.app_listener_kmp.domain.PlatformIcon
 
 actual class AppProvider(private val context: Context) {

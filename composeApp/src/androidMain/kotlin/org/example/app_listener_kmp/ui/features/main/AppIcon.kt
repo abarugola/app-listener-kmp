@@ -1,4 +1,4 @@
-package org.example.app_listener_kmp.ui
+package org.example.app_listener_kmp.ui.features.main
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size

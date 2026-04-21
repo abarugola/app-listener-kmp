@@ -1,6 +1,8 @@
-package org.example.app_listener_kmp.ui
+package org.example.app_listener_kmp.ui.features.main
 
 import android.Manifest
+import android.app.AlarmManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -23,8 +25,10 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import org.example.app_listener_kmp.domain.AppInfo
+import org.example.app_listener_kmp.data.AndroidBlockConfigRepository
+import org.example.app_listener_kmp.domain.model.AppInfo
 import org.example.app_listener_kmp.platform.AppProvider
+import org.example.app_listener_kmp.platform.SleepModeScheduler
 import org.example.app_listener_kmp.platform.getUsageStats
 import org.example.app_listener_kmp.platform.hasUsageStatsPermission
 import org.example.app_listener_kmp.platform.provideContext
@@ -36,8 +40,10 @@ var cachedApps: List<AppInfo>? = null
 @Composable
 fun MainContent() {
 
+
     val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(false) }
+    var hasAlarmPermission by remember { mutableStateOf(false) }
 
     // rememberLauncherForActivityResult es la forma moderna en Compose
     // de lanzar el diálogo de permisos y recibir la respuesta del usuario
@@ -47,7 +53,7 @@ fun MainContent() {
     ) { isGranted ->
         // Por ahora solo lo registramos — en el futuro podrías mostrar
         // un mensaje si el usuario rechazó
-        android.util.Log.d("Blockish", "Permiso notificaciones: $isGranted")
+        Log.d("Blockish", "Permiso notificaciones: $isGranted")
     }
 
     LaunchedEffect(Unit) {
@@ -81,6 +87,15 @@ fun MainContent() {
             if (!hasNotificationPermission) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
+        }
+
+        hasAlarmPermission = hasExactAlarmPermission(context)
+        if (!hasAlarmPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                // Abrimos directo en la página de tu app
+                data = "package:${context.packageName}".toUri()
+            }
+            context.startActivity(intent)
         }
     }
 
@@ -125,7 +140,8 @@ fun MainContent() {
             CircularProgressIndicator()
         }
         else -> {
-            AppScreen(apps)
+            val repository = remember(context) { AndroidBlockConfigRepository(context) }
+            AppScreen(apps, repository)
         }
     }
 
@@ -136,6 +152,7 @@ fun MainContent() {
             if (event == Lifecycle.Event.ON_RESUME) {
                 val permissionGranted = hasUsageStatsPermission(context)
                 hasPermission = permissionGranted
+                hasAlarmPermission = hasExactAlarmPermission(context)
 
                 if (hasPermission) {
                     //recargar datos
@@ -152,6 +169,10 @@ fun MainContent() {
                     )
                     context.startActivity(intent)
                 }
+
+                if (hasAlarmPermission) {
+                    SleepModeScheduler.schedule(context)
+                }
             }
         }
 
@@ -160,5 +181,24 @@ fun MainContent() {
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
+    }
+
+//    LaunchedEffect(Unit) {
+//        // Configuramos para que el modo sueño empiece en 2 minutos
+//        val cal = Calendar.getInstance()
+//        SleepModeConfig.setSleepStart(context, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE) + 2)
+//        SleepModeConfig.setSleepEnd(context, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE) + 4)
+//        SleepModeScheduler.schedule(context)
+//    }
+}
+
+fun hasExactAlarmPermission(context: Context): Boolean {
+    // Esta API solo existe en Android 12+ así que verificamos la versión
+    // En versiones anteriores el permiso se otorga automáticamente
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.canScheduleExactAlarms()
+    } else {
+        true // En Android 11 o menor, siempre está disponible
     }
 }

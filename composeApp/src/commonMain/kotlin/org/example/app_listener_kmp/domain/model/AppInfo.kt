@@ -1,4 +1,6 @@
-package org.example.app_listener_kmp.domain
+package org.example.app_listener_kmp.domain.model
+
+import org.example.app_listener_kmp.domain.PlatformIcon
 
 data class AppInfo (
     val name: String,
